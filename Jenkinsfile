@@ -9,13 +9,33 @@ pipeline {
 
     stages {
         stage('Test') {
+            when {
+                branch 'test'
+            }
+
             steps {
                 sh 'npm install'
                 sh 'npm test'
             }
         }
 
+        stage('Trigger build pipeline') {
+            when {
+                branch 'test'
+            }
+
+            steps {
+                build job: 'build',
+                            wait: false,
+                            propagate: false
+            }
+        }
+
         stage("Build container") {
+            when {
+                branch 'build'
+            }
+
             steps {
                 // !!!! Attention !!!! : Assurez-vous que :
                 // 1. Docker est installé et configuré sur votre machine Jenkins.
@@ -29,9 +49,11 @@ pipeline {
             }
         }
 
-// Test push trigger webhook
-// Test push trigger webhook
         stage('Deploy SSH') {
+            when {
+                branch 'build'
+            }
+
             steps {
                sshagent([env.SSH_KEY_CREDENTIALS_ID]) {
                     sh '''
@@ -50,6 +72,10 @@ pipeline {
         }
 
         stage('Trigger front pipeline') {
+            when {
+                branch 'build'
+            }
+
             steps {
                 build job: 'prod',
                             wait: false,
